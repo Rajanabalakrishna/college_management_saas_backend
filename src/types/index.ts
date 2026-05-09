@@ -1,41 +1,22 @@
+import { Request } from 'express';
 
-export interface College
-{
-    id: string;
-    name: string;
-    domain: string;
-    plan: string;
-    is_active: boolean;
+export interface AuthRequest extends Request {
+  user?: JwtPayload;
 }
 
-export interface User
-{
-    id: string;
-    college_id: string;
-    email: string;
-    password_hash:string;
-    role: 'admin' | 'teacher' | 'student';
-    is_active:boolean;
-}
-
-export interface JwtPayLoad
-{
-   userId: string;
+export interface JwtPayload {
+  userId: string;
   collegeId: string;
   role: string;
-  email: string; 
+  email: string;
 }
 
-declare global
-{
-    namespace express
-    {
-        interface Request
-        {
-            user?: JwtPayLoad;
-        }
-    }
+export interface User {
+  id: string;
+  college_id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  created_at: Date;
 }
-
-
-
