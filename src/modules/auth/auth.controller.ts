@@ -97,20 +97,30 @@ export async function login(req: Request, res: Response): Promise<void> {
     await AuthService.saveRefreshToken(user.id, user.college_id, refreshToken);
 
     // Step 7: Send response
-    res.status(200).json({
-      message: 'Login successful',
-      data: {
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          full_name: user.full_name,
-          role: user.role,
-          college_id: user.college_id,
-        },
-      },
-    });
+    // Step 7 inside login() — replace the user block
+res.status(200).json({
+  message: 'Login successful',
+  data: {
+    accessToken:  accessToken,
+    refreshToken: refreshToken,
+    user: {
+      id:            user.id,
+      email:         user.email,
+      full_name:     user.full_name,
+      role:          user.role,
+      college_id:    user.college_id,
+      is_active:     user.is_active,
+      created_at:    user.created_at,
+      roll_no:       user.roll_no       ?? null,
+      class:         user.class_name    ?? null,
+      sec:           user.sec           ?? null,
+      starting_year: user.starting_year ?? null,
+      ending_year:   user.ending_year   ?? null,
+      branch:        user.branch        ?? null,
+      year:          user.year          ?? null,
+    },
+  },
+});
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -189,6 +199,90 @@ export async function logout(req: Request, res: Response): Promise<void> {
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (err) {
     console.error('Logout error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+
+
+}
+
+
+
+export async function register(req: Request, res: Response): Promise<void> {
+  try {
+    const {
+      email,
+      password,
+      full_name,
+      role,
+      college_domain,
+      // student-specific fields
+      roll_no,
+      class_name,
+      sec,
+      starting_year,
+      ending_year,
+      branch,
+      year,
+    } = req.body;
+
+    if (!email || !password || !full_name || !college_domain) {
+      res.status(400).json({ error: 'email, password, full_name and college_domain are required' });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ error: 'Password must be at least 8 characters' });
+      return;
+    }
+
+    const college = await AuthService.findCollegeByDomain(college_domain);
+    if (!college) {
+      res.status(404).json({ error: 'College not found' });
+      return;
+    }
+
+    const existing = await AuthService.findUserByEmail(email, college.id);
+    if (existing) {
+      res.status(409).json({ error: 'Email already registered in this college' });
+      return;
+    }
+
+    const user = await AuthService.registerUser({
+      collegeId:    college.id,
+      email,
+      password,
+      fullName:     full_name,
+      role:         role || 'student',
+      rollNo:       roll_no       ?? null,
+      className:    class_name    ?? null,
+      sec:          sec           ?? null,
+      startingYear: starting_year ?? null,
+      endingYear:   ending_year   ?? null,
+      branch:       branch        ?? null,
+      year:         year          ?? null,
+    });
+
+    res.status(201).json({
+      message: 'Registration successful',
+      data: {
+        id:            user.id,
+        email:         user.email,
+        full_name:     user.full_name,
+        role:          user.role,
+        college_id:    user.college_id,
+        is_active:     user.is_active,
+        created_at:    user.created_at,
+        roll_no:       user.roll_no,
+        class:         user.class_name,
+        sec:           user.sec,
+        starting_year: user.starting_year,
+        ending_year:   user.ending_year,
+        branch:        user.branch,
+        year:          user.year,
+      },
+    });
+  } catch (err) {
+    console.error('Register error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

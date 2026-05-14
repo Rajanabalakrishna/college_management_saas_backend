@@ -1,13 +1,61 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model College {
+  id         String   @id @default(uuid())
+  name       String
+  domain     String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  users          User[]
+  refresh_tokens RefreshToken[]
+
+  @@map("colleges")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  college_id    String
+  email         String
+  password_hash String
+  full_name     String
+  role          String   @default("student")
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  roll_no       String?
+  class_name    String?
+  sec           String?
+  starting_year Int?
+  ending_year   Int?
+  branch        String?
+  year          Int?
+
+  college        College        @relation(fields: [college_id], references: [id])
+  refresh_tokens RefreshToken[]
+
+  @@unique([email, college_id])
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  user_id    String
+  college_id String
+  token_hash String   @unique
+  is_revoked Boolean  @default(false)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id])
+  college College @relation(fields: [college_id], references: [id])
+
+  @@map("refresh_tokens")
 }

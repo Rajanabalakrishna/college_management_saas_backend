@@ -12,11 +12,19 @@ export interface JwtPayload {
 }
 
 export interface User {
-  id: string;
-  college_id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  created_at: Date;
+  id:            string;
+  college_id:    string;
+  email:         string;
+  full_name:     string;
+  role:          string;
+  is_active:     boolean;
+  created_at:    Date;
+  // student-specific (nullable)
+  roll_no?:       string | null;
+  class_name?:    string | null;
+  sec?:           string | null;
+  starting_year?: number | null;
+  ending_year?:   number | null;
+  branch?:        string | null;
+  year?:          number | null;
 }
