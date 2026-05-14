@@ -1,9 +1,7 @@
-// src/modules/auth/auth.service.ts
-
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import prisma from '../../config/prisma';          // ← NEW import
+import bcrypt  from 'bcryptjs';
+import jwt     from 'jsonwebtoken';
+import crypto  from 'crypto';
+import prisma  from '../../config/prisma';
 import { JwtPayload } from '../../types';
 
 const ACCESS_SECRET  = process.env.JWT_ACCESS_SECRET!;
@@ -43,7 +41,7 @@ export function verifyRefreshToken(token: string): JwtPayload {
   return jwt.verify(token, REFRESH_SECRET) as JwtPayload;
 }
 
-// ── Refresh Token DB (Prisma) ─────────────────────────────
+// ── Refresh Token DB ──────────────────────────────────────
 export async function saveRefreshToken(
   userId: string,
   collegeId: string,
@@ -53,7 +51,7 @@ export async function saveRefreshToken(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  await prisma.refreshToken.create({           // ← was: query(INSERT INTO refresh_tokens...)
+  await prisma.refreshToken.create({
     data: {
       user_id:    userId,
       college_id: collegeId,
@@ -65,8 +63,7 @@ export async function saveRefreshToken(
 
 export async function revokeRefreshToken(rawToken: string): Promise<void> {
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-  await prisma.refreshToken.updateMany({       // ← was: query(UPDATE refresh_tokens SET is_revoked...)
+  await prisma.refreshToken.updateMany({
     where: { token_hash: tokenHash },
     data:  { is_revoked: true },
   });
@@ -74,77 +71,30 @@ export async function revokeRefreshToken(rawToken: string): Promise<void> {
 
 export async function isRefreshTokenValid(rawToken: string): Promise<boolean> {
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-  const token = await prisma.refreshToken.findFirst({  // ← was: query(SELECT id FROM refresh_tokens...)
+  const token = await prisma.refreshToken.findFirst({
     where: {
       token_hash: tokenHash,
       is_revoked: false,
       expires_at: { gt: new Date() },
     },
   });
-
   return token !== null;
 }
 
-// ── User & College (Prisma) ───────────────────────────────
-export async function findUserByEmail(email: string, collegeId: string) {
-  return prisma.user.findFirst({               // ← was: query(SELECT * FROM users WHERE email...)
-    where: {
-      email:      email,
-      college_id: collegeId,
-      is_active:  true,
-    },
-  });
-}
-
+// ── College ───────────────────────────────────────────────
 export async function findCollegeByDomain(domain: string) {
-  return prisma.college.findFirst({            // ← was: query(SELECT * FROM colleges WHERE domain...)
-    where: {
-      domain:    domain,
-      is_active: true,
-    },
+  return prisma.college.findFirst({
+    where: { domain, is_active: true },
   });
 }
 
-export async function registerUser(
-  collegeId: string,
-  email: string,
-  password: string,
-  fullName: string,
-  role: string = 'student'
-) {
-  const passwordHash = await hashPassword(password);
-
-  return prisma.user.create({                  // ← was: query(INSERT INTO users...)
-    data: {
-      college_id:    collegeId,
-      email:         email,
-      password_hash: passwordHash,
-      full_name:     fullName,
-      role:          role,
-    },
-    select: {
-  id:            true,
-  college_id:    true,
-  email:         true,
-  full_name:     true,
-  role:          true,
-  is_active:     true,
-  created_at:    true,
-  // student fields
-  roll_no:       true,
-  class_name:    true,
-  sec:           true,
-  starting_year: true,
-  ending_year:   true,
-  branch:        true,
-  year:          true,
-},
+// ── User ──────────────────────────────────────────────────
+export async function findUserByEmail(email: string, collegeId: string) {
+  return prisma.user.findFirst({
+    where: { email, college_id: collegeId, is_active: true },
   });
 }
 
-
-// ── params type ───────────────────────────────────────────
 interface RegisterUserParams {
   collegeId:    string;
   email:        string;
@@ -194,16 +144,5 @@ export async function registerUser(params: RegisterUserParams) {
       branch:        true,
       year:          true,
     },
-  });
-}
-
-export async function findUserByEmail(email: string, collegeId: string) {
-  return prisma.user.findFirst({
-    where: {
-      email:      email,
-      college_id: collegeId,
-      is_active:  true,
-    },
-    // no select = returns ALL fields including password_hash (needed for login verify)
   });
 }
