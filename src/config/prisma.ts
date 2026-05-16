@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '../generated/prisma';
 import { PrismaPg }     from '@prisma/adapter-pg';
 import { Pool }         from 'pg';
@@ -8,9 +9,6 @@ const pool = new Pool({
 
 const adapter = new PrismaPg(pool);
 
-const prisma = new PrismaClient({
-  adapter,
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error'] : ['error'],
-});
+const prisma = new PrismaClient({ adapter });
 
 export default prisma;
