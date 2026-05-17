@@ -102,6 +102,7 @@ interface RegisterUserParams {
   fullName:     string;
   role:         string;
   rollNo:       string | null;
+  imageUrl:     string | null;
   className:    string | null;
   sec:          string | null;
   startingYear: number | null;
@@ -119,6 +120,7 @@ export async function registerUser(params: RegisterUserParams) {
       email:         params.email,
       password_hash: passwordHash,
       full_name:     params.fullName,
+      image_url:     params.imageUrl,
       role:          params.role,
       roll_no:       params.rollNo,
       class_name:    params.className,
@@ -134,6 +136,7 @@ export async function registerUser(params: RegisterUserParams) {
       email:         true,
       full_name:     true,
       role:          true,
+      image_url:     true,
       is_active:     true,
       created_at:    true,
       roll_no:       true,
