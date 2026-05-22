@@ -4,6 +4,8 @@ import helmet     from 'helmet';
 import dotenv     from 'dotenv';
 import prisma     from './config/prisma';          // ← CHANGED
 import authRoutes from './modules/auth/auth.routes';
+import assignmentRoutes from './assignments/assignment.routes';
+
 
 dotenv.config();
 
@@ -20,6 +22,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/assignments', assignmentRoutes);
 
 app.get('/health', async (_req, res) => {
   try {

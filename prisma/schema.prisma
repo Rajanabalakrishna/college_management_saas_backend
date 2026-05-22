@@ -39,8 +39,11 @@ model User {
   branch        String?
   year          Int?
 
-  college        College        @relation(fields: [college_id], references: [id])
-  refresh_tokens RefreshToken[]
+  college                        College                @relation(fields: [college_id], references: [id])
+  refresh_tokens                 RefreshToken[]
+  created_assignments            Assignment[]           @relation("AssignmentCreator")
+  assignment_submissions         AssignmentSubmission[] @relation("AssignmentSubmissionStudent")
+  graded_assignment_submissions  AssignmentSubmission[] @relation("AssignmentSubmissionGrader")
 
   @@unique([email, college_id])
   @@map("users")
@@ -59,4 +62,65 @@ model RefreshToken {
   college College @relation(fields: [college_id], references: [id])
 
   @@map("refresh_tokens")
+}
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+}
+
+model Assignment {
+  id          String           @id @default(uuid())
+  college_id  String
+  title       String
+  description String
+  subject     String
+  class_name  String
+  section     String?
+  branch      String?
+  year        Int?
+  due_date    DateTime
+  max_marks   Int              @default(100)
+  status      AssignmentStatus @default(DRAFT)
+  file_url    String?
+  created_by  String
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  creator     User                   @relation("AssignmentCreator", fields: [created_by], references: [id])
+  submissions AssignmentSubmission[]
+
+  @@index([college_id, class_name, section, branch, year, status])
+  @@index([created_by])
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id             String           @id @default(uuid())
+  assignment_id  String
+  student_id     String
+  college_id     String
+  answer_text    String?
+  file_url       String?
+  marks_obtained Int?
+  feedback       String?
+  status         SubmissionStatus @default(SUBMITTED)
+  submitted_at   DateTime         @default(now())
+  graded_at      DateTime?
+  graded_by      String?
+
+  assignment Assignment @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  student    User       @relation("AssignmentSubmissionStudent", fields: [student_id], references: [id])
+  grader     User?      @relation("AssignmentSubmissionGrader", fields: [graded_by], references: [id])
+
+  @@unique([assignment_id, student_id])
+  @@index([college_id, student_id])
+  @@index([assignment_id])
+  @@map("assignment_submissions")
 }
