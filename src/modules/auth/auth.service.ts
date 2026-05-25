@@ -27,10 +27,17 @@ export function createAccessToken(payload: JwtPayload): string {
 }
 
 export function createRefreshToken(payload: JwtPayload): string {
-  return jwt.sign(payload, REFRESH_SECRET, {
-    expiresIn: REFRESH_EXPIRY,
-    issuer: 'college-saas',
-  } as jwt.SignOptions);
+  return jwt.sign(
+    {
+      ...payload,
+      jti: crypto.randomUUID(),
+    },
+    REFRESH_SECRET,
+    {
+      expiresIn: REFRESH_EXPIRY,
+      issuer: 'college-saas',
+    } as jwt.SignOptions
+  );
 }
 
 export function verifyAccessToken(token: string): JwtPayload {

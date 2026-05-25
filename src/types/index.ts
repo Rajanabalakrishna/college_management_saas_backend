@@ -9,6 +9,7 @@ export interface JwtPayload {
   collegeId: string;
   role: string;
   email: string;
+  jti?: string;
 }
 
 export interface User {

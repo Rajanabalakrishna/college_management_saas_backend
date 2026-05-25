@@ -7,6 +7,9 @@ import authRoutes from './modules/auth/auth.routes';
 import assignmentRoutes from './assignments/assignment.routes';
 import attendanceRoutes from './modules/attendance/attendance.routes';
 import resultRoutes from './results/result.routes';
+import webhookRoutes from './modules/webhooks/razorpay.webhook.routes';
+//import paymentRoutes from './modules/payments/payment.routes';
+import paymentRoutes from './modules/payments/payment.route';
 
 
 dotenv.config();
@@ -20,12 +23,20 @@ app.use(cors({
   credentials: true,
 }));
 
+
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/assignments', assignmentRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
+
+app.use('/api/v1/webhooks', webhookRoutes);
+app.use(express.json({ limit: '10kb' }));
+
+app.use('/api/v1/payments', paymentRoutes);
+
 
 app.use('/api/v1/results', resultRoutes);
 

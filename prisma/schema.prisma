@@ -50,6 +50,9 @@ model User {
   attendance_marked             AttendanceRecord[]     @relation("AttendanceMarker")
   results_as_student            StudentResult[]        @relation("StudentResults")
   results_created               StudentResult[]        @relation("ResultCreator")
+  userSubscriptions             UserSubscription[]
+  feeInvoices                   FeeInvoice[]
+  payments                      Payment[]
 
   @@unique([email, college_id])
   @@map("users")
@@ -177,4 +180,172 @@ model AssignmentSubmission {
   @@index([college_id, student_id])
   @@index([assignment_id])
   @@map("assignment_submissions")
+}
+
+enum PaymentPurpose {
+  COLLEGE_FEE
+  SAAS_SUBSCRIPTION
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum FeeInvoiceStatus {
+  DUE
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model SaasPlan {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  amount_paise  Int
+  duration_days Int
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  subscriptions UserSubscription[]
+
+  @@map("saas_plans")
+}
+
+model UserSubscription {
+  id         String             @id @default(uuid())
+  college_id String
+  user_id    String
+  plan_id    String
+  status     SubscriptionStatus @default(ACTIVE)
+  starts_at  DateTime
+  expires_at DateTime
+  created_at DateTime           @default(now())
+  updated_at DateTime           @updatedAt
+
+  user User     @relation(fields: [user_id], references: [id])
+  plan SaasPlan @relation(fields: [plan_id], references: [id])
+
+  @@index([college_id, user_id])
+  @@map("user_subscriptions")
+}
+
+model FeeInvoice {
+  id                 String           @id @default(uuid())
+  college_id         String
+  student_id         String
+  invoice_no         String
+  total_amount_paise Int
+  paid_amount_paise  Int              @default(0)
+  status             FeeInvoiceStatus @default(DUE)
+  due_date           DateTime?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  student  User             @relation(fields: [student_id], references: [id])
+  items    FeeInvoiceItem[]
+  payments Payment[]
+  receipts FeeReceipt[]
+
+  @@unique([college_id, invoice_no])
+  @@index([college_id, student_id, status])
+  @@map("fee_invoices")
+}
+
+model FeeInvoiceItem {
+  id             String @id @default(uuid())
+  fee_invoice_id String
+  head_name      String
+  amount_paise   Int
+
+  invoice FeeInvoice @relation(fields: [fee_invoice_id], references: [id], onDelete: Cascade)
+
+  @@map("fee_invoice_items")
+}
+
+model Payment {
+  id                  String         @id @default(uuid())
+  college_id          String
+  user_id             String
+  purpose             PaymentPurpose
+  amount_paise        Int
+  currency            String         @default("INR")
+  status              PaymentStatus  @default(CREATED)
+  razorpay_order_id   String         @unique
+  razorpay_payment_id String?        @unique
+  razorpay_signature  String?
+  fee_invoice_id      String?
+  created_at          DateTime       @default(now())
+  paid_at             DateTime?
+
+  user       User        @relation(fields: [user_id], references: [id])
+  feeInvoice FeeInvoice? @relation(fields: [fee_invoice_id], references: [id])
+  receipt    FeeReceipt?
+
+  @@index([college_id, user_id, purpose, status])
+  @@map("payments")
+}
+
+model FeeReceipt {
+  id             String   @id @default(uuid())
+  college_id     String
+  student_id     String
+  fee_invoice_id String
+  payment_id     String   @unique
+  receipt_no     String
+  amount_paise   Int
+  generated_at   DateTime @default(now())
+
+  invoice FeeInvoice @relation(fields: [fee_invoice_id], references: [id])
+  payment Payment    @relation(fields: [payment_id], references: [id])
+
+  @@unique([college_id, receipt_no])
+  @@map("fee_receipts")
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  college_id String
+  user_id    String
+  title      String
+  body       String
+  type       String
+  data_json  Json?
+  read_at    DateTime?
+  created_at DateTime  @default(now())
+
+  @@index([college_id, user_id, read_at])
+  @@map("notifications")
+}
+
+model UserDevice {
+  id         String   @id @default(uuid())
+  user_id    String
+  college_id String
+  fcm_token  String   @unique
+  platform   String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@map("user_devices")
+}
+
+model RazorpayWebhookEvent {
+  id         String   @id @default(uuid())
+  event_id   String   @unique
+  event_name String
+  processed  Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  @@map("razorpay_webhook_events")
 }
