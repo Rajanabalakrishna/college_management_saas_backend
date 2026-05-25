@@ -1,4 +1,5 @@
 import prisma from '../config/prisma';
+import redis from '../config/redis';
 import {
   AssignmentHttpError,
   AssignmentListResponse,
@@ -32,6 +33,59 @@ const assignmentInclude = {
     },
   },
 };
+
+const ASSIGNMENT_CACHE_TTL_SECONDS = 60;
+
+
+
+function assignmentListCacheKey(user: CurrentUser, query: AssignmentQuery): string {
+  return `assignments:${user.college_id}:list:${user.id}:${JSON.stringify(query)}`;
+}
+
+function assignmentDetailCacheKey(user: CurrentUser, assignmentId: string): string {
+  return `assignments:${user.college_id}:detail:${user.id}:${assignmentId}`;
+}
+
+async function getCached<T>(key: string): Promise<T | null> {
+  try {
+    const cached = await redis.get(key);
+    return cached ? JSON.parse(cached) as T : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setCached(key: string, value: unknown): Promise<void> {
+  try {
+    await redis.set(key, JSON.stringify(value), 'EX', ASSIGNMENT_CACHE_TTL_SECONDS);
+  } catch {
+    // ignore cache failure
+  }
+}
+
+async function clearAssignmentCache(collegeId: string): Promise<void> {
+  try {
+    let cursor = '0';
+
+    do {
+      const [nextCursor, keys] = await redis.scan(
+        cursor,
+        'MATCH',
+        `assignments:${collegeId}:*`,
+        'COUNT',
+        '100'
+      );
+
+      cursor = nextCursor;
+
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } while (cursor !== '0');
+  } catch {
+    // ignore cache failure
+  }
+}
 
 function normalizedRole(role: string): string {
   return role.trim().toLowerCase();
@@ -211,6 +265,13 @@ export async function listAssignments(
 ): Promise<AssignmentListResponse> {
   const user = await getCurrentUser(auth);
 
+  const cacheKey = assignmentListCacheKey(user, query);
+const cached = await getCached<AssignmentListResponse>(cacheKey);
+
+if (cached) {
+  return cached;
+}
+
   const where: any = {
     college_id: auth.collegeId,
   };
@@ -240,13 +301,18 @@ export async function listAssignments(
     prisma.assignment.count({ where }),
   ]);
 
-  return {
-    items: items.map((item) => toAssignmentResponse(item)),
-    page: query.page,
-    limit: query.limit,
-    total,
-    total_pages: Math.max(Math.ceil(total / query.limit), 1),
-  };
+  const result = {
+  items: items.map((item) => toAssignmentResponse(item)),
+  page: query.page,
+  limit: query.limit,
+  total,
+  total_pages: Math.max(Math.ceil(total / query.limit), 1),
+};
+
+await setCached(cacheKey, result);
+
+return result;
+
 }
 
 export async function getAssignment(
@@ -254,6 +320,13 @@ export async function getAssignment(
   assignmentId: string
 ): Promise<AssignmentResponse> {
   const user = await getCurrentUser(auth);
+
+  const cacheKey = assignmentDetailCacheKey(user, assignmentId);
+const cached = await getCached<AssignmentResponse>(cacheKey);
+
+if (cached) {
+  return cached;
+}
 
   const assignment = await prisma.assignment.findFirst({
     where: {
@@ -272,7 +345,9 @@ export async function getAssignment(
       throw new AssignmentHttpError(403, 'You can access only your assignments');
     }
 
-    return toAssignmentResponse(assignment);
+   const response = toAssignmentResponse(assignment);
+await setCached(cacheKey, response);
+return response;
   }
 
   if (!assignmentMatchesStudent(assignment, user)) {
@@ -287,7 +362,9 @@ export async function getAssignment(
     },
   });
 
-  return toAssignmentResponse(assignment, mySubmission);
+ const response = toAssignmentResponse(assignment, mySubmission);
+await setCached(cacheKey, response);
+return response;
 }
 
 export async function createAssignment(
@@ -319,6 +396,8 @@ export async function createAssignment(
     include: assignmentInclude,
   });
 
+  await clearAssignmentCache(user.college_id);
+
   return toAssignmentResponse(assignment);
 }
 
@@ -349,6 +428,8 @@ export async function updateAssignment(
     data,
     include: assignmentInclude,
   });
+
+  await clearAssignmentCache(user.college_id);
 
   return toAssignmentResponse(assignment);
 }
@@ -418,6 +499,8 @@ export async function submitAssignment(
           file_url: input.fileUrl ?? null,
         },
       });
+
+      await clearAssignmentCache(user.college_id);
 
   return toSubmissionResponse(submission);
 }
