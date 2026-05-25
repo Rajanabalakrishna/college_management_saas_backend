@@ -8,14 +8,16 @@ datasource db {
 }
 
 model College {
-  id         String   @id @default(uuid())
-  name       String
-  domain     String   @unique
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
+  id                 String             @id @default(uuid())
+  name               String
+  domain             String             @unique
+  is_active          Boolean            @default(true)
+  created_at         DateTime           @default(now())
+  attendance_records AttendanceRecord[]
 
-  users          User[]
-  refresh_tokens RefreshToken[]
+  users           User[]
+  refresh_tokens  RefreshToken[]
+  student_results StudentResult[]
 
   @@map("colleges")
 }
@@ -39,14 +41,46 @@ model User {
   branch        String?
   year          Int?
 
-  college                        College                @relation(fields: [college_id], references: [id])
-  refresh_tokens                 RefreshToken[]
-  created_assignments            Assignment[]           @relation("AssignmentCreator")
-  assignment_submissions         AssignmentSubmission[] @relation("AssignmentSubmissionStudent")
-  graded_assignment_submissions  AssignmentSubmission[] @relation("AssignmentSubmissionGrader")
+  college                       College                @relation(fields: [college_id], references: [id])
+  refresh_tokens                RefreshToken[]
+  created_assignments           Assignment[]           @relation("AssignmentCreator")
+  assignment_submissions        AssignmentSubmission[] @relation("AssignmentSubmissionStudent")
+  graded_assignment_submissions AssignmentSubmission[] @relation("AssignmentSubmissionGrader")
+  attendance_as_student         AttendanceRecord[]     @relation("StudentAttendance")
+  attendance_marked             AttendanceRecord[]     @relation("AttendanceMarker")
+  results_as_student            StudentResult[]        @relation("StudentResults")
+  results_created               StudentResult[]        @relation("ResultCreator")
 
   @@unique([email, college_id])
   @@map("users")
+}
+
+model StudentResult {
+  id             String   @id @default(uuid())
+  college_id     String
+  student_id     String
+  subject        String
+  exam_type      String
+  semester       Int?
+  academic_year  String
+  max_marks      Int      @default(100)
+  marks_obtained Float
+  grade          String?
+  result_status  String   @default("PASS")
+  remarks        String?
+  published      Boolean  @default(true)
+  created_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  college College @relation(fields: [college_id], references: [id])
+  student User    @relation("StudentResults", fields: [student_id], references: [id])
+  creator User?   @relation("ResultCreator", fields: [created_by], references: [id])
+
+  @@unique([student_id, subject, exam_type, semester, academic_year])
+  @@index([college_id, student_id])
+  @@index([college_id, academic_year, semester, exam_type])
+  @@map("student_results")
 }
 
 model RefreshToken {
@@ -62,6 +96,26 @@ model RefreshToken {
   college College @relation(fields: [college_id], references: [id])
 
   @@map("refresh_tokens")
+}
+
+model AttendanceRecord {
+  id              String   @id @default(uuid())
+  college_id      String
+  student_id      String
+  attendance_date DateTime @db.Date
+  status          String   @default("ABSENT")
+  marked_by       String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  college College @relation(fields: [college_id], references: [id])
+  student User    @relation("StudentAttendance", fields: [student_id], references: [id])
+  marker  User?   @relation("AttendanceMarker", fields: [marked_by], references: [id])
+
+  @@unique([student_id, attendance_date])
+  @@index([college_id, attendance_date])
+  @@index([college_id, attendance_date, status])
+  @@map("attendance_records")
 }
 
 enum AssignmentStatus {

@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const assignment_controller_1 = require("./assignment.controller");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticate);
+router.get('/', assignment_controller_1.listAssignments);
+router.post('/', assignment_controller_1.createAssignment);
+router.get('/:id', assignment_controller_1.getAssignment);
+router.patch('/:id', assignment_controller_1.updateAssignment);
+router.post('/:id/submit', assignment_controller_1.submitAssignment);
+router.get('/:id/my-submission', assignment_controller_1.getMySubmission);
+router.get('/:id/submissions', assignment_controller_1.listSubmissions);
+router.patch('/:id/submissions/:submissionId/grade', assignment_controller_1.gradeSubmission);
+exports.default = router;

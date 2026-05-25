@@ -5,6 +5,8 @@ import dotenv     from 'dotenv';
 import prisma     from './config/prisma';          // ← CHANGED
 import authRoutes from './modules/auth/auth.routes';
 import assignmentRoutes from './assignments/assignment.routes';
+import attendanceRoutes from './modules/attendance/attendance.routes';
+import resultRoutes from './results/result.routes';
 
 
 dotenv.config();
@@ -23,6 +25,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/assignments', assignmentRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+
+app.use('/api/v1/results', resultRoutes);
 
 app.get('/health', async (_req, res) => {
   try {

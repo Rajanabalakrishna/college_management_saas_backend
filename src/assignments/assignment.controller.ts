@@ -20,6 +20,16 @@ function getAuthUser(req: AuthenticatedRequest) {
   return req.user;
 }
 
+function getRouteParam(req: AuthenticatedRequest, name: string): string {
+  const value = req.params[name];
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new AssignmentHttpError(400, `${name} route parameter is required`);
+  }
+
+  return value;
+}
+
 function handleError(error: unknown, res: Response): void {
   if (error instanceof AssignmentHttpError) {
     res.status(error.statusCode).json({ error: error.message });
@@ -54,9 +64,9 @@ export async function getAssignment(
     const authUser = getAuthUser(req);
 
     const assignment = await AssignmentService.getAssignment(
-      authUser,
-      req.params.id
-    );
+  authUser,
+  getRouteParam(req, 'id')
+);
 
     res.status(200).json({ data: assignment });
   } catch (error) {
@@ -95,10 +105,10 @@ export async function updateAssignment(
     const input = validateUpdateAssignmentBody(req.body);
 
     const assignment = await AssignmentService.updateAssignment(
-      authUser,
-      req.params.id,
-      input
-    );
+  authUser,
+  getRouteParam(req, 'id'),
+  input
+);
 
     res.status(200).json({
       message: 'Assignment updated successfully',
@@ -117,11 +127,11 @@ export async function submitAssignment(
     const authUser = getAuthUser(req);
     const input = validateSubmitAssignmentBody(req.body);
 
-    const submission = await AssignmentService.submitAssignment(
-      authUser,
-      req.params.id,
-      input
-    );
+  const submission = await AssignmentService.submitAssignment(
+  authUser,
+  getRouteParam(req, 'id'),
+  input
+);
 
     res.status(200).json({
       message: 'Assignment submitted successfully',
@@ -140,9 +150,9 @@ export async function getMySubmission(
     const authUser = getAuthUser(req);
 
     const submission = await AssignmentService.getMySubmission(
-      authUser,
-      req.params.id
-    );
+  authUser,
+  getRouteParam(req, 'id')
+);
 
     res.status(200).json({ data: submission });
   } catch (error) {
@@ -158,10 +168,9 @@ export async function listSubmissions(
     const authUser = getAuthUser(req);
 
     const submissions = await AssignmentService.listSubmissions(
-      authUser,
-      req.params.id
-    );
-
+  authUser,
+  getRouteParam(req, 'id')
+);
     res.status(200).json({
       data: {
         items: submissions,
@@ -182,12 +191,11 @@ export async function gradeSubmission(
     const input = validateGradeSubmissionBody(req.body);
 
     const submission = await AssignmentService.gradeSubmission(
-      authUser,
-      req.params.id,
-      req.params.submissionId,
-      input
-    );
-
+  authUser,
+  getRouteParam(req, 'id'),
+  getRouteParam(req, 'submissionId'),
+  input
+);
     res.status(200).json({
       message: 'Submission graded successfully',
       data: submission,

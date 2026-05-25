@@ -7,6 +7,7 @@ export type SubmissionStatus = 'SUBMITTED' | 'GRADED';
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
+export type AuthenticatedUser = JwtPayload;
 
 export class AssignmentHttpError extends Error {
   constructor(
