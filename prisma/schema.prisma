@@ -15,9 +15,11 @@ model College {
   created_at         DateTime           @default(now())
   attendance_records AttendanceRecord[]
 
-  users           User[]
-  refresh_tokens  RefreshToken[]
-  student_results StudentResult[]
+  users          User[]
+  refresh_tokens RefreshToken[]
+
+  student_results       StudentResult[]
+  college_subscriptions CollegeSubscription[]
 
   @@map("colleges")
 }
@@ -49,10 +51,10 @@ model User {
   attendance_as_student         AttendanceRecord[]     @relation("StudentAttendance")
   attendance_marked             AttendanceRecord[]     @relation("AttendanceMarker")
   results_as_student            StudentResult[]        @relation("StudentResults")
-  results_created               StudentResult[]        @relation("ResultCreator")
-  userSubscriptions             UserSubscription[]
-  feeInvoices                   FeeInvoice[]
+  user_subscriptions            UserSubscription[]
+  fee_invoices                  FeeInvoice[]
   payments                      Payment[]
+  results_created               StudentResult[]        @relation("ResultCreator")
 
   @@unique([email, college_id])
   @@map("users")
@@ -185,6 +187,7 @@ model AssignmentSubmission {
 enum PaymentPurpose {
   COLLEGE_FEE
   SAAS_SUBSCRIPTION
+  COLLEGE_SUBSCRIPTION
 }
 
 enum PaymentStatus {
@@ -216,7 +219,8 @@ model SaasPlan {
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
 
-  subscriptions UserSubscription[]
+  subscriptions         UserSubscription[]
+  college_subscriptions CollegeSubscription[]
 
   @@map("saas_plans")
 }
@@ -275,7 +279,8 @@ model FeeInvoiceItem {
 model Payment {
   id                  String         @id @default(uuid())
   college_id          String
-  user_id             String
+  user_id             String?
+  plan_id             String?
   purpose             PaymentPurpose
   amount_paise        Int
   currency            String         @default("INR")
@@ -287,7 +292,7 @@ model Payment {
   created_at          DateTime       @default(now())
   paid_at             DateTime?
 
-  user       User        @relation(fields: [user_id], references: [id])
+  user       User?       @relation(fields: [user_id], references: [id])
   feeInvoice FeeInvoice? @relation(fields: [fee_invoice_id], references: [id])
   receipt    FeeReceipt?
 
@@ -348,4 +353,21 @@ model RazorpayWebhookEvent {
   created_at DateTime @default(now())
 
   @@map("razorpay_webhook_events")
+}
+
+model CollegeSubscription {
+  id         String             @id @default(uuid())
+  college_id String
+  plan_id    String
+  status     SubscriptionStatus @default(ACTIVE)
+  starts_at  DateTime
+  expires_at DateTime
+  created_at DateTime           @default(now())
+  updated_at DateTime           @updatedAt
+
+  college College  @relation(fields: [college_id], references: [id])
+  plan    SaasPlan @relation(fields: [plan_id], references: [id])
+
+  @@index([college_id, status])
+  @@map("college_subscriptions")
 }

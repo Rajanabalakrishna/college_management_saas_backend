@@ -10,6 +10,7 @@ import resultRoutes from './results/result.routes';
 import webhookRoutes from './modules/webhooks/razorpay.webhook.routes';
 //import paymentRoutes from './modules/payments/payment.routes';
 import paymentRoutes from './modules/payments/payment.route';
+import publicRoutes from './modules/public/public.routes';
 
 
 dotenv.config();
@@ -36,6 +37,8 @@ app.use('/api/v1/webhooks', webhookRoutes);
 app.use(express.json({ limit: '10kb' }));
 
 app.use('/api/v1/payments', paymentRoutes);
+
+app.use('/api/v1/public', publicRoutes);
 
 
 app.use('/api/v1/results', resultRoutes);
